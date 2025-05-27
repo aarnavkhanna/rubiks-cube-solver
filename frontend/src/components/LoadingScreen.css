@@ -1,0 +1,33 @@
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top left, #2a0055, #0c0025);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.8s ease-out;
+  }
+  
+  .loading-screen.fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .cube-logo {
+    width: 160px;
+    height: auto;
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
+    animation: float 2s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%   { transform: translateY(0px); }
+    50%  { transform: translateY(-12px); }
+    100% { transform: translateY(0px); }
+  }
+  

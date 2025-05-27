@@ -1,78 +1,43 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import './UploadForm.css';
 
-function UploadForm() {
-  const [videoFile, setVideoFile] = useState(null);
-  const [response, setResponse] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export default function UploadForm({ onFilesChange, onSubmit }) {
+  const [cubeCount, setCubeCount] = useState(0);
 
-  const handleFileChange = (e) => {
-    setVideoFile(e.target.files[0]);
-    setResponse(null);
-    setError(null);
-  };
-
-  const handleUpload = async () => {
-    if (!videoFile) {
-      setError("Please select a video file first.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("video", videoFile);
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const res = await axios.post("http://localhost:5000/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        }
-      });
-
-      setResponse(res.data);
-    } catch (err) {
-      console.error("Upload failed:", err);
-      if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Upload failed. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetch('http://localhost:5000/cube-count')
+      .then(res => res.json())
+      .then(data => setCubeCount(data.count))
+      .catch(() => setCubeCount(0));
+  }, []);
 
   return (
-    <div style={{ padding: "1rem", fontFamily: "Arial" }}>
-      <h2>Upload a Rubik’s Cube Video</h2>
+    <div className="form-container">
+      <div className="cube-bubble">
+        🎉 We've solved <strong>{cubeCount}</strong> cubes so far!
+      </div>
 
-      <input type="file" accept="video/*" onChange={handleFileChange} />
-      <br /><br />
+      <div className="form-header">
+        <img src="/assets/cube_logo.png" alt="Cube" className="form-logo" />
+        <h1 className="form-title">Rubik’s Cube Solver</h1>
+      </div>
 
-      <button onClick={handleUpload} disabled={loading}>
-        {loading ? "Processing..." : "Upload and Solve"}
+      <p className="form-instruction">Upload 6 images (1 per face):</p>
+
+      <label htmlFor="file-upload" className="custom-file-upload">
+        📁 Choose Images
+        <input
+          id="file-upload"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={onFilesChange}
+        />
+      </label>
+
+      <button className="upload-button" onClick={onSubmit}>
+        🚀 Upload and Solve
       </button>
-
-      <br /><br />
-      {error && <p style={{ color: "red" }}>❌ {error}</p>}
-
-      {response && (
-        <div style={{ marginTop: "1rem" }}>
-          <h3>✅ Cube Processed</h3>
-
-          <p><strong>Cube State (raw):</strong></p>
-          <code style={{ whiteSpace: "pre-wrap" }}>{response.cube_state}</code>
-
-          <br /><br />
-          <p><strong>Advanced Solution (for cubers):</strong></p>
-          <code style={{ whiteSpace: "pre-wrap" }}>{response.solution}</code>
-        </div>
-      )}
     </div>
   );
 }
-
-export default UploadForm;
