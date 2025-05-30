@@ -1,19 +1,17 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import json
 import kociemba
 from collections import Counter
-from auto_color_detection import get_cube_state_from_images
-import json
+from qbr.image_solver import solve_cube_from_images
 
 app = Flask(__name__)
 CORS(app)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
-
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# === Cube Count Helper ===
+# === Count increment logic ===
 def increment_cube_count():
     path = os.path.join(os.path.dirname(__file__), 'cube_count.json')
     if not os.path.exists(path):
@@ -27,60 +25,69 @@ def increment_cube_count():
         json.dump(data, f)
         f.truncate()
 
+# === Return cube count ===
 @app.route('/cube-count', methods=['GET'])
 def cube_count():
     path = os.path.join(os.path.dirname(__file__), 'cube_count.json')
     if not os.path.exists(path):
-        return jsonify({ "count": 0 })
+        return jsonify({"count": 0})
     with open(path) as f:
         count = json.load(f)['solved']
-    return jsonify({ "count": count })
+    return jsonify({"count": count})
 
-# === Main Upload Route ===
+# === Main Upload Endpoint ===
 @app.route('/upload-images', methods=['POST'])
 def upload_images():
-    print("✅ Image upload endpoint hit")
+    print("✅ Upload endpoint hit")
 
-    face_paths = []
-    for i in range(1, 7):
-        key = f'face{i}'
+    face_keys = ['face1', 'face2', 'face3', 'face4', 'face5', 'face6']
+    face_labels = ['U', 'R', 'F', 'D', 'L', 'B']
+    image_paths = []
+
+    # Step 1: Save uploaded images
+    for key, face in zip(face_keys, face_labels):
         if key not in request.files:
             return jsonify({"error": f"Missing image: {key}"}), 400
         file = request.files[key]
-        save_path = os.path.join(UPLOAD_FOLDER, f"{key}.jpg")
-        file.save(save_path)
-        face_paths.append(save_path)
+        filename = f"{face}.jpg"
+        path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(path)
+        image_paths.append(path)
 
     try:
-        cube_state = get_cube_state_from_images(face_paths)
-        print("🧊 Cube State:", cube_state)
+        # Step 2: Use QBR to generate cube string
+        cube_string = solve_cube_from_images(image_paths)
+        print("🧊 Cube String:", cube_string)
 
-        color_counts = Counter(cube_state)
-        print("🧩 Color Counts:", color_counts)
-
-        if len(cube_state) != 54 or any(count != 9 for count in color_counts.values()):
+        # Step 3: Validate cube string
+        if len(cube_string) != 54:
             return jsonify({
-                "message": "❌ Invalid cube string",
-                "cube_state": cube_state,
-                "color_counts": dict(color_counts)
+                "message": "❌ Invalid cube string length",
+                "cube_string": cube_string
             }), 400
 
-        solution = kociemba.solve(cube_state)
-        print("✅ Solution:", solution)
+        color_counts = Counter(cube_string)
+        if any(count != 9 for count in color_counts.values()):
+            return jsonify({
+                "message": "❌ Invalid color counts",
+                "cube_string": cube_string,
+                "counts": dict(color_counts)
+            }), 400
 
-        # ✅ Count this as a solved cube
+        # Step 4: Solve
+        solution = kociemba.solve(cube_string)
         increment_cube_count()
 
         return jsonify({
-            "message": "Cube solved successfully",
-            "cube_state": cube_state,
+            "message": "✅ Cube solved successfully",
+            "cube_state": cube_string,
             "solution": solution
         })
 
     except Exception as e:
         print("❌ Error:", str(e))
         return jsonify({
-            "message": "Error processing cube",
+            "message": "❌ Error processing cube",
             "error": str(e)
         }), 500
 
