@@ -2,7 +2,7 @@
 body {
   margin: 0;
   font-family: 'Poppins', sans-serif;
-  background: radial-gradient(circle at top left, #2a0055, #0c0025);
+  background: #1e1e1e;
   color: white;
   min-height: 100vh;
   overflow: hidden;
@@ -11,17 +11,19 @@ body {
 .app-wrapper {
   width: 100%;
   height: 100vh;
+  background: #1e1e1e;
 }
 
 .main-container {
   display: flex;
   align-items: center;
   height: 100vh;
-  background: radial-gradient(circle at top left, #2a0055, #0c0025);
+  background: #1e1e1e;
   color: white;
 }
 
 .cube-area {
   flex: 1;
   height: 100vh;
+  /* inherits the dark background from .main-container */
 }
